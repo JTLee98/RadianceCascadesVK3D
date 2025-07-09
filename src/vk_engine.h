@@ -6,6 +6,27 @@
 #include <vk_types.h>
 #include <vk_images.h>
 
+struct DeletionQueue
+{
+	std::deque<std::function<void()>> deletors;
+
+	void push_function(std::function<void()>&& function) 
+	{
+		deletors.push_back(function);
+	}
+
+	void flush() 
+	{
+		// reverse iterate the deletion queue to call all the functions
+		for (auto it = deletors.crbegin(); it != deletors.crend(); it++) 
+		{
+			(*it)();
+		}
+
+		deletors.clear();
+	}
+};
+
 constexpr unsigned int FRAME_OVERLAP = 2;
 
 struct FrameData
@@ -15,12 +36,15 @@ struct FrameData
 	VkSemaphore _swapchainSemaphore; // for getting image from swapchain
 	VkSemaphore _renderSemaphore; // for presenting swapchain image to OS
 	VkFence _renderFence; // for recording command buffers of next frame - signalled when cmd buffer is finished drawing
+	DeletionQueue _deletionQueue;
 };
 
 constexpr VkExtent2D DEFAULT_RES = {.width = 1280, .height = 720};
 
 class VulkanEngine {
 public:
+	VmaAllocator _allocator;
+
 	#ifdef _DEBUG
 	VkDebugUtilsMessengerEXT _debug_messenger;
 	#endif
@@ -43,8 +67,16 @@ public:
 	FrameData& get_current_frame() 
 		{ return _frames[_frameNumber % FRAME_OVERLAP]; }
 	
+	// draw resources
+	AllocatedImg _drawImage;
+	VkExtent2D _drawExtent;
+	
+	// graphics queue
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
+
+	// deletion queue
+	DeletionQueue _mainDeletionQueue;
 
 private:
 	void init_vulkan();
@@ -59,6 +91,7 @@ public:
 	int _frameNumber {0};
 	bool stop_rendering{ false };
 	VkExtent2D _windowExtent = DEFAULT_RES;
+  VkClearColorValue _clearValue = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 
 	struct SDL_Window* _window{ nullptr };
 
