@@ -46,6 +46,7 @@ void VulkanEngine::init()
     _isInitialized = true;
     #ifdef _DEBUG
       fmt::println("[ENGINE] successfully initialized");
+      std::fflush(stdout);
     #endif
 }
 
@@ -93,6 +94,7 @@ void VulkanEngine::cleanup()
 
     #ifdef _DEBUG
         fmt::println("[ENGINE] cleanup successful");
+        std::fflush(stdout);
     #endif
 }
 
@@ -287,6 +289,7 @@ void VulkanEngine::init_vulkan()
 
     #ifdef _DEBUG
     fmt::println("[ENGINE] init_vulkan(): success \n         GPU = {}", vkb_gpu.name);
+    std::fflush(stdout);
     #endif
 }
 
@@ -354,6 +357,7 @@ void VulkanEngine::init_swapchain()
     #ifdef _DEBUG
       fmt::println("[ENGINE] init_swapchain(): success \n         framebuffs = {} | format = {}", 
         vkb_swapchain.image_count, string_VkFormat(vkb_swapchain.image_format));
+      std::fflush(stdout);
     #endif
 }
 
@@ -390,6 +394,7 @@ void VulkanEngine::init_commands()
     }
     #ifdef _DEBUG
       fmt::println("[ENGINE] init_commands(): success");
+      std::fflush(stdout);
     #endif
 }
 
@@ -418,5 +423,6 @@ void VulkanEngine::init_sync_structures()
     
     #ifdef _DEBUG
       fmt::println("[ENGINE] init_sync_structures(): success");
+      std::fflush(stdout);
     #endif
 }
