@@ -43,6 +43,7 @@ void Engine::init()
     init_swapchain();
     init_commands();
     init_sync_structures();
+    init_descriptors();
 
     // everything went fine
     _isInitialized = true;
@@ -427,4 +428,44 @@ void Engine::init_sync_structures()
       fmt::println("[ENGINE] init_sync_structures(): success");
       std::fflush(stdout);
     #endif
+}
+
+void Engine::init_descriptors()
+{
+    // create descriptor pool that can hold
+    // 10 sets, each with 1 image
+    std::vector<vkutil::DescriptorAllocator::PoolSizeRatio> sizes = 
+    {
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
+    };
+    _globalDescriptorAllocator.init_pool(_device, 10, sizes);
+    
+    // create layout
+    {
+        vkutil::DescriptorLayoutBuilder builder;
+        builder.add_binding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        _drawImgDescriptorsLayout = builder.build(_device, VK_SHADER_STAGE_COMPUTE_BIT);
+    }
+
+    // allocate descriptor set for draw image
+    _drawImgDescriptors = _globalDescriptorAllocator.allocate(_device, _drawImgDescriptorsLayout);
+
+    // specify draw image descriptor
+    VkDescriptorImageInfo drawImg_info = 
+    {
+        .imageView = _drawImage.imgview,
+        .imageLayout = VK_IMAGE_LAYOUT_GENERAL
+    };
+    VkWriteDescriptorSet drawImg_write = 
+    {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = _drawImgDescriptors,
+        .dstBinding = 0,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        .pImageInfo = &drawImg_info
+    };
+
+    // write descriptor set
+    vkUpdateDescriptorSets(_device, 1, &drawImg_write, 0, nullptr);
 }

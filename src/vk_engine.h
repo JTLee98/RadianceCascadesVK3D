@@ -5,6 +5,7 @@
 
 #include <vk_types.h>
 #include <vk_images.h>
+#include <vk_descriptors.h>
 
 struct SDL_Window;
 
@@ -75,6 +76,12 @@ public:
 	// draw resources
 	vkutil::AllocatedImg _drawImage;
 	VkExtent2D _drawExtent;
+
+	// descriptor sets
+	vkutil::DescriptorAllocator _globalDescriptorAllocator;
+	
+	VkDescriptorSet _drawImgDescriptors;
+	VkDescriptorSetLayout _drawImgDescriptorsLayout;
 	
 	// graphics queue
 	VkQueue _graphicsQueue;
@@ -89,6 +96,7 @@ private:
 	void resize_surface();
 	void init_commands();
 	void init_sync_structures();
+	void init_descriptors();
 
 public:
 
