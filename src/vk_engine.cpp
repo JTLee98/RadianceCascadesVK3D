@@ -15,10 +15,12 @@
 #include <chrono>
 #include <thread>
 
-VulkanEngine* loadedEngine = nullptr;
+using namespace VkEngine;
 
-VulkanEngine& VulkanEngine::Get() { return *loadedEngine; }
-void VulkanEngine::init()
+Engine* loadedEngine = nullptr;
+
+Engine& Engine::Get() { return *loadedEngine; }
+void Engine::init()
 {
     // only one engine initialization is allowed with the application.
     assert(loadedEngine == nullptr);
@@ -50,7 +52,7 @@ void VulkanEngine::init()
     #endif
 }
 
-void VulkanEngine::cleanup()
+void Engine::cleanup()
 {
     if (_isInitialized) {
         // wait for gpu to stop
@@ -98,7 +100,7 @@ void VulkanEngine::cleanup()
     #endif
 }
 
-void VulkanEngine::draw()
+void Engine::draw()
 {
   #pragma region initializeFrame
   // get current frame data
@@ -185,7 +187,7 @@ void VulkanEngine::draw()
   #pragma endregion
 }
 
-void VulkanEngine::run()
+void Engine::run()
 {
     SDL_Event e;
     bool bQuit = false;
@@ -223,7 +225,7 @@ void VulkanEngine::run()
 }
 
 // initialize vkInstance, vkPhysicalDevice, vkDevice
-void VulkanEngine::init_vulkan()
+void Engine::init_vulkan()
 {
     #pragma region instance
     vkb::InstanceBuilder inst_builder;
@@ -293,7 +295,7 @@ void VulkanEngine::init_vulkan()
     #endif
 }
 
-void VulkanEngine::init_swapchain()
+void Engine::init_swapchain()
 {
     vkb::SwapchainBuilder vkb_swapchain_builder(_chosenGPU, _device, _surface);
     vkb_swapchain_builder
@@ -361,12 +363,12 @@ void VulkanEngine::init_swapchain()
     #endif
 }
 
-void VulkanEngine::resize_surface()
+void Engine::resize_surface()
 {
     
 }
 
-void VulkanEngine::init_commands()
+void Engine::init_commands()
 {
     // create command pool
     {
@@ -398,7 +400,7 @@ void VulkanEngine::init_commands()
     #endif
 }
 
-void VulkanEngine::init_sync_structures()
+void Engine::init_sync_structures()
 {
     // fence to check when GPU finishes rendering a frame
     VkFenceCreateInfo _fenceCI = 

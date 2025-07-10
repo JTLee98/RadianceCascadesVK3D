@@ -30,6 +30,8 @@
         }                                                               \
     } while (0)
 
+namespace vkutil
+{
 struct AllocatedImg
 {
     VkImage img;
@@ -38,3 +40,4 @@ struct AllocatedImg
     VkExtent3D extent;
     VkFormat fmt;
 };
+}

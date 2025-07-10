@@ -6,6 +6,11 @@
 #include <vk_types.h>
 #include <vk_images.h>
 
+struct SDL_Window;
+
+namespace VkEngine
+{
+
 struct DeletionQueue
 {
 	std::deque<std::function<void()>> deletors;
@@ -41,7 +46,7 @@ struct FrameData
 
 constexpr VkExtent2D DEFAULT_RES = {.width = 1280, .height = 720};
 
-class VulkanEngine {
+class Engine {
 public:
 	VmaAllocator _allocator;
 
@@ -68,7 +73,7 @@ public:
 		{ return _frames[_frameNumber % FRAME_OVERLAP]; }
 	
 	// draw resources
-	AllocatedImg _drawImage;
+	vkutil::AllocatedImg _drawImage;
 	VkExtent2D _drawExtent;
 	
 	// graphics queue
@@ -93,9 +98,9 @@ public:
 	VkExtent2D _windowExtent = DEFAULT_RES;
   VkClearColorValue _clearValue = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 
-	struct SDL_Window* _window{ nullptr };
+	::SDL_Window* _window{ nullptr };
 
-	static VulkanEngine& Get();
+	static Engine& Get();
 
 	//initializes everything in the engine
 	void init();
@@ -109,3 +114,5 @@ public:
 	//run main loop
 	void run();
 };
+
+}
