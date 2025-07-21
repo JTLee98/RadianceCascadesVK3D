@@ -489,12 +489,12 @@ void Engine::init_descriptors()
     #endif
 }
     
-void VkEngine::Engine::init_pipelines ()
+void Engine::init_pipelines ()
 {
     init_background_pipelines();
 }
 
-void VkEngine::Engine::init_background_pipelines ()
+void Engine::init_background_pipelines ()
 {
     // create pipeline layout
     VkPipelineLayoutCreateInfo layout_ci = 
