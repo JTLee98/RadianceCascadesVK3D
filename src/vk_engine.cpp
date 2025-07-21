@@ -44,6 +44,7 @@ void Engine::init()
     init_commands();
     init_sync_structures();
     init_descriptors();
+    init_pipelines();
 
     // everything went fine
     _isInitialized = true;
@@ -140,10 +141,16 @@ void Engine::draw()
   #pragma endregion
 
   #pragma region RenderCommands
-  // clear background
-  VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
-  vkCmdClearColorImage(cmdbuf, _drawImage.img, VK_IMAGE_LAYOUT_GENERAL, &_clearValue, 1, &clearRange);
-
+  { // clear background
+    VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCmdClearColorImage(cmdbuf, _drawImage.img, VK_IMAGE_LAYOUT_GENERAL, &_clearValue, 1, &clearRange);
+  }
+  // bind pipeline
+  vkCmdBindPipeline(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipeline);
+  // bind descriptor set
+  vkCmdBindDescriptorSets(cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1, &_drawImgDescriptors, 0, nullptr); 
+  // execute compute pipeline dispach (16x16 workgroup size)
+  vkCmdDispatch(cmdbuf, static_cast<uint32_t>(std::ceil(_drawExtent.width / 16.0)), static_cast<uint32_t>(std::ceil(_drawExtent.height / 16.0)), 1);
   // --- submit other rendering commands here --- //
   #pragma endregion
 
@@ -468,4 +475,63 @@ void Engine::init_descriptors()
 
     // write descriptor set
     vkUpdateDescriptorSets(_device, 1, &drawImg_write, 0, nullptr);
+
+    // cleanup when engine stops
+    _mainDeletionQueue.push_function([&]()
+        {
+            _globalDescriptorAllocator.destroy_pool(_device);
+            vkDestroyDescriptorSetLayout(_device, _drawImgDescriptorsLayout, nullptr);
+        });
+    
+    #ifdef _DEBUG
+        fmt::println("[ENGINE] init_descriptors(): success");
+        std::fflush(stdout);
+    #endif
+}
+    
+void VkEngine::Engine::init_pipelines ()
+{
+    init_background_pipelines();
+}
+
+void VkEngine::Engine::init_background_pipelines ()
+{
+    // create pipeline layout
+    VkPipelineLayoutCreateInfo layout_ci = 
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 1,
+        .pSetLayouts = &_drawImgDescriptorsLayout,
+    };
+    VK_CHECK(vkCreatePipelineLayout(_device, &layout_ci, nullptr, &_gradientPipelineLayout));
+
+    // load shaders
+    VkShaderModule comp_draw_shader;
+    bool&& res = vkutil::load_shader_module("../../shaders/gradient.comp.spv", _device, &comp_draw_shader);
+    assert(res);
+    
+    // create pipeline
+    VkPipelineShaderStageCreateInfo stage_ci = 
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+        .module = comp_draw_shader,
+        .pName = "main"
+    };
+    VkComputePipelineCreateInfo pipeline_ci = 
+    {
+        .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        .stage = stage_ci,
+        .layout = _gradientPipelineLayout
+    };
+    VK_CHECK(vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &pipeline_ci, nullptr, &_gradientPipeline));
+
+    // cleanup
+    vkDestroyShaderModule(_device, comp_draw_shader, nullptr);
+    _mainDeletionQueue.push_function([&]()
+        {
+            vkDestroyPipelineLayout(_device, _gradientPipelineLayout, nullptr);
+            vkDestroyPipeline(_device, _gradientPipeline, nullptr);
+        });
+
 }

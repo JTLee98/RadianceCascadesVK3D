@@ -6,6 +6,7 @@
 #include <vk_types.h>
 #include <vk_images.h>
 #include <vk_descriptors.h>
+#include <vk_pipelines.h>
 
 struct SDL_Window;
 
@@ -82,6 +83,10 @@ public:
 	
 	VkDescriptorSet _drawImgDescriptors;
 	VkDescriptorSetLayout _drawImgDescriptorsLayout;
+
+	// pipelines
+	VkPipeline _gradientPipeline;
+	VkPipelineLayout _gradientPipelineLayout;
 	
 	// graphics queue
 	VkQueue _graphicsQueue;
@@ -97,6 +102,8 @@ private:
 	void init_commands();
 	void init_sync_structures();
 	void init_descriptors();
+	void init_pipelines();
+	void init_background_pipelines();
 
 public:
 
