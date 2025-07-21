@@ -4,13 +4,13 @@ using namespace vkutil;
 
 // DescriptorLayoutBuilder definitions
 
-void DescriptorLayoutBuilder::add_binding(uint32_t _binding, VkDescriptorType _type)
+void DescriptorLayoutBuilder::add_binding(uint32_t _binding, VkDescriptorType _type, uint32_t _count)
 {
   VkDescriptorSetLayoutBinding new_binding = 
   {
     .binding = _binding,
     .descriptorType = _type,
-    .descriptorCount = 1
+    .descriptorCount = _count
   };
   bindings.push_back(new_binding);
 }
