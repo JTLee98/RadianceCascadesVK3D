@@ -112,6 +112,9 @@ private:
 	void init_pipelines();
 	void init_background_pipelines();
 
+	void init_imgui();
+	void draw_imgui(VkCommandBuffer _cmdbuf, VkImageView _target);
+
 public:
 
 	bool _isInitialized{ false };
