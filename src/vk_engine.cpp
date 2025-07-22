@@ -232,6 +232,25 @@ void Engine::run()
     }
 }
 
+void Engine::imm_submit(std::function<void (VkCommandBuffer cmd)> &&func)
+{
+    // synchronize
+    VK_CHECK(vkResetFences(_device, 1, &_imm_fence));
+    VK_CHECK(vkResetCommandBuffer(_imm_cmdbuf, 0));
+    
+    // record immediate commands
+    VkCommandBufferBeginInfo cmdbegin_info = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    VK_CHECK(vkBeginCommandBuffer(_imm_cmdbuf, &cmdbegin_info));
+    func(_imm_cmdbuf);
+    VK_CHECK(vkEndCommandBuffer(_imm_cmdbuf));
+
+    // submit
+    VkCommandBufferSubmitInfo cmdsubmit_info = vkinit::command_buffer_submit_info(_imm_cmdbuf);
+    VkSubmitInfo2 submit_info = vkinit::submit_info(&cmdsubmit_info, nullptr, nullptr);
+    VK_CHECK(vkQueueSubmit2(_graphicsQueue, 1, &submit_info, _imm_fence));
+    VK_CHECK(vkWaitForFences(_device, 1, &_imm_fence, true, 9999999999));
+}
+
 // initialize vkInstance, vkPhysicalDevice, vkDevice
 void Engine::init_vulkan()
 {
@@ -378,30 +397,33 @@ void Engine::resize_surface()
 
 void Engine::init_commands()
 {
-    // create command pool
+    // createinfo for graphics command pools
+    VkCommandPoolCreateInfo cmdpool_ci =
     {
-        VkCommandPoolCreateInfo cmdpooCI =
-        {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-            .queueFamilyIndex = _graphicsQueueFamily
-        };
-        for(FrameData& f : _frames)
-        {
-            VK_CHECK(vkCreateCommandPool(_device, &cmdpooCI, nullptr, &f._cmdpool));
-            // allocate default framebuffer for rendering
-            VkCommandBufferAllocateInfo alloc_CI = 
-            {
-                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-                .pNext = nullptr,
-                .commandPool = f._cmdpool,
-                .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                .commandBufferCount = 1
-            };
-            VK_CHECK(vkAllocateCommandBuffers(_device, &alloc_CI, &f._mainCmdBuf));
-        }
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = _graphicsQueueFamily
+    };
+    // create command pool and allocate command buffer for each frame in swapchain
+    for(FrameData& f : _frames)
+    {
+        VK_CHECK(vkCreateCommandPool(_device, &cmdpool_ci, nullptr, &f._cmdpool));
+        // allocate default framebuffer for rendering
+        VkCommandBufferAllocateInfo alloc_CI = vkinit::command_buffer_allocate_info(f._cmdpool);
+        VK_CHECK(vkAllocateCommandBuffers(_device, &alloc_CI, &f._mainCmdBuf));
     }
+
+    // create command pool and allocate command buffer for immediate commands
+    VK_CHECK(vkCreateCommandPool(_device, &cmdpool_ci, nullptr, &_imm_cmdpool));
+    VkCommandBufferAllocateInfo alloc_ci = vkinit::command_buffer_allocate_info(_imm_cmdpool);
+    VK_CHECK(vkAllocateCommandBuffers(_device, &alloc_ci, &_imm_cmdbuf));
+    // cleanup
+    _mainDeletionQueue.push_function([=]()
+        {
+            vkDestroyCommandPool(_device, _imm_cmdpool, nullptr);
+        });
+
     #ifdef _DEBUG
       fmt::println("[ENGINE] init_commands(): success");
       std::fflush(stdout);
@@ -430,6 +452,14 @@ void Engine::init_sync_structures()
         VK_CHECK(vkCreateSemaphore(_device, &_semaphoreCI, nullptr, &f._swapchainSemaphore));
         VK_CHECK(vkCreateSemaphore(_device, &_semaphoreCI, nullptr, &f._renderSemaphore));
     }
+
+    // initialize fence for immediate commands
+    VK_CHECK(vkCreateFence(_device, &_fenceCI, nullptr, &_imm_fence));
+    // cleanup
+    _mainDeletionQueue.push_function([=]()
+        {
+            vkDestroyFence(_device, _imm_fence, nullptr);
+        });
     
     #ifdef _DEBUG
       fmt::println("[ENGINE] init_sync_structures(): success");

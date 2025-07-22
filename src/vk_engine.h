@@ -58,7 +58,14 @@ public:
 	VkInstance _instance;
 	VkPhysicalDevice _chosenGPU;
 	VkDevice _device;
-	
+
+	// immediate submit 
+	VkFence _imm_fence;
+	VkCommandPool _imm_cmdpool;
+	VkCommandBuffer _imm_cmdbuf;
+	void imm_submit(std::function<void(VkCommandBuffer cmd)>&& func);
+
+	// swapchain and draw surface
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swapchain;
 	std::vector<VkSurfaceFormatKHR> _swapchainImgFmts =
